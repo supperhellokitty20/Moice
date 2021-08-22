@@ -76,7 +76,7 @@
     //Data connection 
     function connectPeer() {
         if (conn) { conn.close(); }
-        var remoteId = document.querySelector("#remoteId");
+        globalThis.remoteId = document.querySelector("#remoteId");
         conn = peer.connect(remoteId.value, { reliable: true });
         conn.on('open', function () {
             document.querySelector("#status").innerHTML = "Connected to: " + conn.peer;
@@ -103,10 +103,12 @@
         hangupBtn.disabled = true;
         cameraBtn.disabled = false;
         //Close peer connection below 
+        mediaConn.close() ; 
     }
     function startCall() {
-        if (remoteId != null || cameraBtn.disabled === false) {
-            var call = peer.call(remoteId.value, localStream);
+
+        if (window.remoteId.value != null || cameraBtn.disabled === false) {
+            var call = peer.call(window.remoteId.value, localStream);
             call.on('stream',
                 function (stream) {
                     remoteStream = stream;

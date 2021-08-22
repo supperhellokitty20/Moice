@@ -49,7 +49,7 @@
             var peer = null;
             var conn = null;
             var lastPeerId = null;
-            var peerConnection = null;
+            var mediaConn = null ;  
             function init() {
                 cameraBtn.addEventListener('click', getMedia);
                 hangupBtn.addEventListener('click', hangUp);
@@ -67,8 +67,9 @@
                 document.querySelector('#localVideo').srcObject = stream;
                 hangupBtn.disabled = false;
                 cameraBtn.disabled = true;
+                answerBtn.disabled = false ; 
             };
-            
+
             async function hangUp(e) {
                 const tracks = document.querySelector("#localVideo").srcObject.getTracks();
                 tracks.forEach(track => { track.stop(); });
@@ -78,8 +79,8 @@
                 hangupBtn.disabled = true;
                 cameraBtn.disabled = false;
                 //Close peer connection below 
+                mediaConn.close() ; 
             }
-
             function peerInit() {
                 peer = new Peer();
                 peer.on("open",
@@ -106,6 +107,14 @@
                     }
                     conn = c;
                     document.querySelector("#status").innerHTML = "Connected to : " + conn.peer;
+                })
+                peer.on("call",function(call){
+                    mediaConn = call ; 
+                    mediaConn.answer(localStream)
+                    mediaConn.on("stream",function(stream){
+                        remoteStream= stream ; 
+                        document.querySelector("#remoteVideo").srcObject= remoteStream ; 
+                    })
                 })
             }
             init();
