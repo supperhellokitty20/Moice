@@ -1,28 +1,22 @@
-<div style="white-space: pre;">
+# Moice , the video and voice chat
 
-# Peer-to-Peer Cue System #
+Powered by THC and  much of quarantine free time i got . 
 
-Cue system for simple two-way communication and visual signaling using a WebRTC peer-to-peer connection.
-This was initially designed for signaling on-stage actors during a theater performance.
+## A peerjs fork   
 
-Demo: https://jmcker.github.io/Peer-to-Peer-Cue-System
+## Get started 
 
-[PeerJS examples](https://peerjs.com/examples.html)
+Open index.html and follow instruction . I'm tooo high to write more sorry :( might update this later if anyone even look at it lol . 
 
-### Setup ###
 
-1. Open receive.html on the receiving device.
-2. Open send.html on the sending device.
-3. Copy the ID from the receiving device to the sending device's ID field.
-4. Press *Connect*.
-4. Both should indicate a successful connection in the *Status* box.
+## Secure peer-to-peer connection 
 
-### Features ###
 
-The receiver has access to large indicators for standby, go, fade, and stop signals.
 
-The sender has access to buttons that send the standby, go, fade, and stop signals, triggering the receiver's indicators.
 
-Both have access to a two-way messenger for additional communication.
 
-</div>
+
+
+
+
+

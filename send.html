@@ -25,25 +25,35 @@
 
 <body>
     <div class="container">
-        <div class="column">
-            <br><br>
-            <strong>Input peer id</strong>
-            <input type="text" id="remoteId" placeholder="Peer id ">
-            <button class="btn btn-primary" id="connectBtn">Connect</button>
-            <br><br>
-            <p id="status">Status: </p>
-            <br><br><br>
-            <button class="btn btn-primary" id="callBtn">Call</button>
-            <button id="cameraBtn" class="btn btn-warning">Open Cam</button>
-            <button id="hangupBtn" class="btn btn-warning">Hang Up</button>
-
-            <div id="videos">
-                <video id="localVideo" muted autoplay playsinline></video>
-                <video id="remoteVideo" autoplay playsinline></video>
+        <div class="row">
+            <div class="col-7">
+                <br><br>
+                <strong>Input peer id</strong>
+                <input type="text" id="remoteId" placeholder="Peer id ">
+                <button class="btn btn-primary" id="connectBtn">Connect</button>
+                <br><br>
+                <p id="status">Status: </p>
+                <br>
+                <button id="disconnectBtn" class="btn btn-warning">Disconnect peer</button>
+                <br><br><br>
+                <button class="btn btn-primary" id="callBtn">Call</button>
+                <button id="cameraBtn" class="btn btn-warning">Open Cam</button>
+                <button id="hangupBtn" class="btn btn-warning">Hang Up</button>
+                <div id="videos">
+                    <video id="localVideo" muted autoplay playsinline></video>
+                    <video id="remoteVideo" autoplay playsinline></video>
+                </div>
             </div>
-
+            <div class="col-5">
+                <div class="card-body" id="messageBox">
+                </div>
+                <br>
+                <input type="text" id="sendMessageBox" placeholder="Message ">
+                <button class="btn btn-primary" id="sendBtn">Send</button>
+            </div>
         </div>
-    </div>
+            
+        </div>
     </div>
     <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
 </body>
@@ -51,49 +61,107 @@
 <script>
     var localStream = null;
     var remoteStream = null;
-
+    var message = document.querySelector("#messageBox");
+    var sendMessageBox= document.querySelector("#sendMessageBox");
     var cameraBtn = document.querySelector('#cameraBtn');
     var hangupBtn = document.querySelector('#hangupBtn');
     var callBtn = document.querySelector('#callBtn');
     var connectBtn = document.querySelector('#connectBtn');
+    var disconnectBtn = document.querySelector("#disconnectBtn");
+    var sendMessageBtn= document.querySelector("#sendBtn");
 
     var lastPeerId = null;
     var peer = null;
     var conn = null;
-    var mediaConn = null ; 
-    var remoteConnection = null;
+    var mediaConn = null;
     function init() {
         cameraBtn.addEventListener('click', getMedia);
         hangupBtn.addEventListener('click', hangUp);
         connectBtn.addEventListener('click', connectPeer);
-
+        disconnectBtn.addEventListener('click', closeDataConnection);
         callBtn.addEventListener('click', startCall);
+        disconnectBtn.disabled = true;
         hangupBtn.disabled = true;
         cameraBtn.disabled = false;
         callBtn.disabled = true;
         peerInit();
+        //Listen for enter 
+        sendMessageBox.addEventListener('keypress', function (e) {
+                        var event = e || window.event;
+                        var char = event.which || event.keyCode;
+                        if (char == '13')
+                            sendMessageBtn.click();
+                    });
+        //Send message to other peer 
+        sendBtn.addEventListener('click', function () {
+            if (conn && conn.open) {
+                var msg = sendMessageBox.value;
+                sendMessageBox.value = "";
+                conn.send(msg);
+                console.log("Sent: " + msg);
+                addMessage("<span class=\"selfMsg\">Self: </span> " + msg);
+            } else {
+                console.log('Connection is closed');
+            }
+        });
     };
-    //Data connection 
+    //Data connection , handling messaging between peer  
     function connectPeer() {
         if (conn) { conn.close(); }
         globalThis.remoteId = document.querySelector("#remoteId");
         conn = peer.connect(remoteId.value, { reliable: true });
+        disconnectBtn.disabled = false;
         conn.on('open', function () {
             document.querySelector("#status").innerHTML = "Connected to: " + conn.peer;
             console.log("Connected" + conn.peer);
-        })
+        }); 
+        //Add message sent from other peer 
+        conn.on('data',function(data){
+           addMessage("<span class=\"peerMsg\">Peer:</span> " + data)  ;
+        }); 
+        conn.on('close',function(){
+            document.querySelector("#status").innerHTML="Status :Disconnected" ;
+        }) ;
     }
+    function addMessage(msg){
+        var now = new Date();
+        var h = now.getHours();
+        var m = addZero(now.getMinutes());
+        var s = addZero(now.getSeconds());
+        if (h > 12)
+            h -= 12;
+        else if (h === 0)
+            h = 12;
+
+        function addZero(t) {
+            if (t < 10)
+                t = "0" + t;
+            return t;
+        };
+        message.innerHTML = "<br><span class=\"msg-time\">" + h + ":" + m + ":" + s + "</span>  -  " + msg + message.innerHTML;
+    }
+    
+
     async function getMedia(e) {
         const stream = await navigator.mediaDevices.getUserMedia(
             { video: true, audio: true });
         localStream = stream;
-        remoteStream = new MediaStream();
         //Stream the video live feed to the html DOM 
         document.querySelector('#localVideo').srcObject = stream;
         hangupBtn.disabled = false;
         cameraBtn.disabled = true;
         callBtn.disabled = false;
     };
+    function closeDataConnection() {
+        if(conn&& conn.open){
+            peer.destroy();
+        }
+        peer.on('close', function () {
+            conn = null;
+            document.querySelector("#status").ineerHTML = "Status : Disconnected from peer";
+            disconnectBtn.disabled=true ;
+        });
+    }
     async function hangUp(e) {
         const tracks = document.querySelector("#localVideo").srcObject.getTracks();
         tracks.forEach(track => { track.stop(); });
@@ -101,19 +169,22 @@
             remoteStream.getTracks().forEach(track => track.stop());
         }
         hangupBtn.disabled = true;
-        cameraBtn.disabled = false;
         //Close peer connection below 
-        mediaConn.close() ; 
+        mediaConn.close();
     }
     function startCall() {
 
         if (window.remoteId.value != null || cameraBtn.disabled === false) {
-            var call = peer.call(window.remoteId.value, localStream);
-            call.on('stream',
+            mediaConn = peer.call(window.remoteId.value, localStream);
+            mediaConn.on('stream',
                 function (stream) {
                     remoteStream = stream;
                     document.querySelector("#remoteVideo").srcObject = remoteStream;
                 }, (err) => console.log(err));
+
+            mediaConn.on('close', function () {
+                document.querySelector("#status").innerHTML = "Ended call from" + call.peer;
+            });
         } else { alert("You have to open mic or enter peer id") }
     }
     //Connect to remote peer 
@@ -137,6 +208,18 @@
                 setTimeout(function () { c.close(); }, 500);
             });
         });
+        peer.on("disconnected", function () {
+            document.querySelector("#status").ineerHTML = "Status : Disconnected from server, trying to reconnect, your P2P connection still exist";
+            //Trying to get reconnection from server 
+            peer.id = lastPeerId;
+            peer._lastServerId = lastPeerId;
+            peer.reconnect();
+        });
+        peer.on("error", function (err) {
+            console.log(err);
+            alert("" + err);
+        });
+
     }
     init();
 </script>
